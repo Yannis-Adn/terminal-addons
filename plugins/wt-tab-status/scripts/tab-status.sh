@@ -60,8 +60,10 @@ target_state() {
       field notification_type
       case $REPLY in
         permission_prompt | elicitation_dialog | elicitation_url_dialog | agent_needs_input) REPLY=waiting ;;
-        # Seul signal après une interruption par Échap : on quitte « en cours ».
-        idle_prompt) [ "$current" = working ] && REPLY=neutral || REPLY= ;;
+        # Seul signal après une interruption par Échap (aucun hook ne la signale).
+        # Claude ne l'envoie jamais pendant une question ou une permission
+        # affichée : on peut donc quitter « en cours » comme « vous attend ».
+        idle_prompt) [ "$current" = working ] || [ "$current" = waiting ] && REPLY=neutral || REPLY= ;;
         *) REPLY= ;;
       esac
       ;;

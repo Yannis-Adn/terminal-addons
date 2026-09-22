@@ -108,6 +108,12 @@ check "Échap puis idle_prompt : en cours → neutre" "$WORKING$NEUTRAL" "$(out)
 
 fresh
 hook UserPromptSubmit
+hook PreToolUse '"tool_name":"AskUserQuestion"'
+hook Notification '"notification_type":"idle_prompt"'
+check "Échap sur une question puis idle_prompt : attend → neutre" "$WORKING$WAITING$NEUTRAL" "$(out)"
+
+fresh
+hook UserPromptSubmit
 hook Stop
 hook Notification '"notification_type":"idle_prompt"'
 check "idle_prompt après terminé : ignoré" "$WORKING$DONE" "$(out)"
