@@ -152,6 +152,29 @@ WT_SESSION=test TMUX= WT_TAB_STATUS_OUT="$tmp/out" WT_TAB_STATUS_STATE_DIR="$tmp
   bash "$script" <<< '{"session_id":"../../etc/x","hook_event_name":"UserPromptSubmit"}'
 check "garde-fou : session_id invalide, rien" "" "$(out)"
 
+# --- find_pty ----------------------------------------------------------------
+# Un faux « claude » (script nommé claude, donc comm = claude) lance un bash qui
+# source tab-status.sh et appelle find_pty. Sous `script`, le faux claude a un
+# pty jetable : find_pty doit renvoyer exactement celui-là, jamais celui de la
+# vraie session Claude qui exécute les tests.
+
+mkdir -p "$tmp/bin"
+cat > "$tmp/bin/claude" << 'EOF'
+#!/bin/bash
+tty
+bash -c 'source "$1"; find_pty && echo "$REPLY" || echo "introuvable"' _ "$SCRIPT"
+EOF
+chmod +x "$tmp/bin/claude"
+
+result=$(SCRIPT=$script script -qec "$tmp/bin/claude" /dev/null < /dev/null | tr -d '\r')
+expected_tty=$(sed -n 1p <<< "$result")
+found_tty=$(sed -n 2p <<< "$result")
+check "find_pty : trouve le pty du processus claude" "$expected_tty" "$found_tty"
+check "find_pty : c'est bien un /dev/pts" "oui" "$([[ $found_tty == /dev/pts/* ]] && echo oui || echo non)"
+
+result=$(SCRIPT=$script "$tmp/bin/claude" < /dev/null 2> /dev/null | sed -n 2p)
+check "find_pty : claude sans pty (claude -p) → introuvable" "introuvable" "$result"
+
 # --- Bilan -----------------------------------------------------------------
 
 echo
