@@ -107,6 +107,8 @@ hook PermissionRequest '"agent_id":"a1","agent_type":"general-purpose","tool_nam
 check "permission d'un sous-agent : ignorée" "$WORKING" "$(out)"
 hook Notification '"notification_type":"permission_prompt","message":"Claude needs your permission"'
 check "… la notification à 6 s prend le relais" "$WORKING$WAITING" "$(out)"
+hook Stop '"background_tasks":[{"id":"b1","type":"subagent","status":"running","agent_type":"general-purpose"}]'
+check "… fin du tour principal, sous-agent toujours en attente : reste rouge" "$WORKING$WAITING" "$(out)"
 
 fresh
 hook UserPromptSubmit

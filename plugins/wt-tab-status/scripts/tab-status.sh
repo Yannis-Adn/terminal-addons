@@ -98,7 +98,15 @@ target_state() {
         *) REPLY= ;;
       esac
       ;;
-    Stop) has_running_agents && REPLY=working || REPLY=done ;;
+    Stop)
+      if has_running_agents; then
+        # Un sous-agent en fond peut encore attendre une permission : ne pas
+        # effacer l'attente qu'il a signalée.
+        [ "$current" = waiting ] && REPLY= || REPLY=working
+      else
+        REPLY=done
+      fi
+      ;;
     StopFailure) REPLY=error ;;
     *) REPLY= ;;
   esac
