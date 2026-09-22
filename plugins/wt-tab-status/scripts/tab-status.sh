@@ -1,70 +1,72 @@
 #!/bin/bash
-# wt-tab-status — reflète l'état de Claude Code dans l'onglet Windows Terminal.
+# wt-tab-status — mirrors Claude Code's state in the Windows Terminal tab.
 #
-# Appelé par tous les hooks du plugin avec le JSON de l'événement sur stdin.
-# Colore le fond de l'onglet (DECAC), pilote l'anneau de progression (OSC 9;4)
-# et fait sonner la cloche (BEL) en écrivant directement dans le pty de Claude :
-# les hooks n'ont pas de terminal de contrôle, et le champ officiel
-# `terminalSequence` refuse les séquences CSI comme DECAC.
+# Called by every hook of the plugin with the event JSON on stdin. Colors the
+# tab background (DECAC), drives the progress ring (OSC 9;4) and rings the bell
+# (BEL) by writing straight to Claude's pty: hooks have no controlling
+# terminal, and the official `terminalSequence` output field rejects CSI
+# sequences such as DECAC.
 #
-# N'écrit jamais sur stdout (injecté dans le contexte de Claude pour
-# SessionStart et UserPromptSubmit) et sort toujours avec le code 0.
+# Never writes to stdout (it would be injected into Claude's context on
+# SessionStart and UserPromptSubmit) and always exits with status 0.
 #
-# Variables de test :
-#   WT_TAB_STATUS_OUT           fichier qui reçoit les séquences à la place du pty
-#   WT_TAB_STATUS_STATE_DIR     dossier des fichiers d'état
-#   WT_TAB_STATUS_TOAST_LOG     journal des toasts déclenchés (aucun toast affiché)
-#   WT_TAB_STATUS_TOAST_DRYRUN  fichier qui reçoit le titre et le corps calculés par toast.ps1
+# Environment:
+#   WT_TAB_STATUS_LANG          toast language (fr | en); default: Windows display language
+# Test-only:
+#   WT_TAB_STATUS_OUT           file that receives the sequences instead of the pty
+#   WT_TAB_STATUS_STATE_DIR     directory of the state files
+#   WT_TAB_STATUS_TOAST_LOG     log of triggered toasts (no toast is shown)
+#   WT_TAB_STATUS_TOAST_DRYRUN  file that receives the title and body computed by toast.ps1
 
-# Fond d'onglet, « <index texte>;<index fond> » de la palette xterm-256.
-# 263;264 rend la main à la couleur du profil.
+# Tab background, "<text index>;<background index>" in the xterm-256 palette.
+# 263;264 hands the color back to the profile.
 declare -A COLOR=([neutral]='263;264' [working]='15;25' [waiting]='15;124' [done]='15;28' [error]='15;166')
-# Anneau OSC 9;4 : 0 masqué, 3 tourne, 4 pause (barre des tâches jaune), 2 erreur (rouge).
+# OSC 9;4 ring: 0 hidden, 3 spinning, 4 paused (yellow taskbar), 2 error (red taskbar).
 declare -A RING=([neutral]='0' [working]='3' [waiting]='4;100' [done]='0' [error]='2;100')
-# États qui méritent une alerte : cloche et toast.
+# States that deserve an alert: bell and toast.
 declare -A ALERT=([waiting]=1 [done]=1 [error]=1)
 
 input=
 
-# field <clé> : place dans REPLY la valeur du premier champ chaîne <clé> du JSON.
-# Une clé imbriquée dans une chaîne est échappée (\"clé\") et ne correspond pas.
+# field <key>: set REPLY to the value of the first string field <key> of the JSON.
+# A key nested inside a string is escaped (\"key\") and does not match.
 field() {
   local re="\"$1\"[[:space:]]*:[[:space:]]*\"([^\"]*)\""
   REPLY=
   [[ $input =~ $re ]] && REPLY=${BASH_REMATCH[1]}
 }
 
-# Vrai si un agent tourne encore en fond (sous-agent, workflow, coéquipier,
-# session cloud) : il relancera Claude. Un shell ou un monitor en fond (serveur
-# de dev…) peut durer indéfiniment et n'empêche pas « terminé ».
+# True when an agent still runs in the background (subagent, workflow, teammate,
+# cloud session): it will wake Claude up again. A background shell or monitor
+# (dev server…) may run forever and does not prevent "done".
 has_running_agents() {
   local re='"type"[[:space:]]*:[[:space:]]*"(subagent|workflow|teammate|cloud session)"'
   [[ $input =~ $re ]]
 }
 
-# agent : place dans REPLY l'auteur de l'événement (agent_id, ou « main »).
+# agent: set REPLY to the author of the event (agent_id, or "main").
 agent() {
   field agent_id
   REPLY=${REPLY:-main}
 }
 
-# target_state <état courant> <auteur de l'attente> : place dans REPLY l'état
-# visé par l'événement, ou une chaîne vide si l'événement ne change rien.
+# target_state <current state> <author of the wait>: set REPLY to the state the
+# event leads to, or to an empty string when the event changes nothing.
 target_state() {
   local current=$1 owner=$2 event
   field hook_event_name
   event=$REPLY
   case $event in
     SessionStart)
-      # L'auto-compaction relance SessionStart en plein tour.
+      # Auto-compaction fires SessionStart again in the middle of a turn.
       field source
       [ "$REPLY" = compact ] && REPLY= || REPLY=neutral
       ;;
     SessionEnd) REPLY=neutral ;;
     UserPromptSubmit | ElicitationResult) REPLY=working ;;
     PreToolUse | PostToolUse | PostToolUseFailure)
-      # Pendant une attente, seul l'agent qui attend peut la lever : les outils
-      # d'un sous-agent parallèle ne veulent pas dire que la demande est réglée.
+      # While waiting, only the waiting agent can end the wait: tools run by a
+      # parallel subagent do not mean the request was answered.
       agent
       if [ "$current" = waiting ] && [ -n "$owner" ] && [ "$owner" != any ] && [ "$REPLY" != "$owner" ]; then
         REPLY=
@@ -80,9 +82,9 @@ target_state() {
       fi
       ;;
     PermissionRequest)
-      # Un sous-agent en fond ne peut pas afficher de demande : Claude lance
-      # quand même ce hook, puis refuse. Les vraies demandes d'un sous-agent
-      # arrivent par Notification:permission_prompt (~6 s plus tard).
+      # A background subagent cannot show a prompt: Claude still runs this hook,
+      # then denies. Real subagent prompts arrive through
+      # Notification:permission_prompt (~6 s later).
       field agent_id
       [ -z "$REPLY" ] && REPLY=waiting || REPLY=
       ;;
@@ -91,20 +93,20 @@ target_state() {
       field notification_type
       case $REPLY in
         permission_prompt | worker_permission_prompt | elicitation_dialog | elicitation_url_dialog | agent_needs_input) REPLY=waiting ;;
-        # Seul signal après une interruption par Échap (aucun hook ne la signale).
-        # Claude ne l'envoie jamais pendant une question ou une permission
-        # affichée : on peut donc quitter « en cours » comme « vous attend ».
+        # The only signal after an Esc interrupt (no hook reports it). Claude
+        # never sends it while a question or permission prompt is on screen,
+        # so it can clear "working" as well as "waiting".
         idle_prompt) [ "$current" = working ] || [ "$current" = waiting ] && REPLY=neutral || REPLY= ;;
         *) REPLY= ;;
       esac
       ;;
     Stop)
       if has_running_agents; then
-        # Un sous-agent en fond peut encore attendre une permission : ne pas
-        # effacer l'attente qu'il a signalée.
+        # A background subagent may still be waiting for a permission: keep
+        # the wait it reported visible.
         [ "$current" = waiting ] && REPLY= || REPLY=working
       else
-        REPLY=done
+        REPLY='done'
       fi
       ;;
     StopFailure) REPLY=error ;;
@@ -112,10 +114,10 @@ target_state() {
   esac
 }
 
-# find_pty : place dans REPLY le pty de la session Claude qui a lancé le hook.
-# Remonte les parents jusqu'au premier processus « claude » et échoue si son
-# entrée standard n'est pas un pty (claude -p, SDK, claude lancé par un outil) :
-# un claude imbriqué ne doit pas colorer l'onglet de la session parente.
+# find_pty: set REPLY to the pty of the Claude session that ran the hook.
+# Walks up the parents to the first "claude" process and fails if its standard
+# input is not a pty (claude -p, SDK, claude started by a tool): a nested claude
+# must not color the tab of the parent session.
 find_pty() {
   local pid=$PPID comm stat link i
   REPLY=
@@ -128,14 +130,14 @@ find_pty() {
       return 0
     fi
     read -r stat 2> /dev/null < "/proc/$pid/stat" || return 1
-    # Après « pid (comm) » viennent l'état puis le ppid.
+    # "pid (comm)" is followed by the state, then the ppid.
     read -r _ pid _ <<< "${stat##*) }"
   done
   return 1
 }
 
-# emit <état> : écrit couleur, anneau et cloche en un seul write() pour limiter
-# le risque d'entrelacement avec le rendu de Claude.
+# emit <state>: write color, ring and bell in a single write() to limit the
+# risk of interleaving with Claude's own rendering.
 emit() {
   local seq dest
   printf -v seq '\e[2;%s,|\e]9;4;%s\a' "${COLOR[$1]}" "${RING[$1]}"
@@ -149,20 +151,22 @@ emit() {
   printf '%s' "$seq" 2> /dev/null >> "$dest"
 }
 
-# toast <état> : notification Windows lancée en arrière-plan, sans bloquer Claude.
-# Le JSON du hook part sur stdin de PowerShell, qui en tire titre et corps.
+# toast <state>: Windows notification started in the background, never blocking
+# Claude. The hook JSON goes to PowerShell's stdin, which builds title and body.
 toast() {
   if [ -n "${WT_TAB_STATUS_TOAST_LOG:-}" ]; then
     printf '%s\n' "$1" >> "$WT_TAB_STATUS_TOAST_LOG"
     return 0
   fi
-  local ps dry=0 encoded dir
+  local ps dry=0 lang='' encoded dir
   ps=$(command -v powershell.exe) || ps=/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe
   [ -x "$ps" ] || return 0
   [ -n "${WT_TAB_STATUS_TOAST_DRYRUN:-}" ] && dry=1
+  [[ ${WT_TAB_STATUS_LANG:-} =~ ^[a-z]{2}$ ]] && lang=$WT_TAB_STATUS_LANG
   dir=$(dirname "${BASH_SOURCE[0]}")
   encoded=$({
-    printf '$Kind = '"'"'%s'"'"'\n$DryRun = [bool]%s\n' "$1" "$dry"
+    # shellcheck disable=SC2016 # literal PowerShell variables
+    printf '$Kind = '"'"'%s'"'"'\n$DryRun = [bool]%s\n$Lang = '"'"'%s'"'"'\n' "$1" "$dry" "$lang"
     cat "$dir/toast.ps1"
   } | iconv -f UTF-8 -t UTF-16LE | base64 -w0)
   if [ "$dry" = 1 ]; then
@@ -173,44 +177,44 @@ toast() {
   fi
 }
 
-# update <fichier d'état> : lit l'état, calcule la transition et l'applique.
-# Appelé avec le verrou ouvert sur le descripteur 9.
+# update <state file>: read the state, compute the transition and apply it.
+# Called with the lock open on file descriptor 9.
 update() {
-  local state_file=$1 current= owner= target event
+  local state_file=$1 current='' owner='' target event
   flock -w 2 9 2> /dev/null
   field hook_event_name
   event=$REPLY
-  # SessionStart repart de zéro : un --resume ne doit pas croire l'onglet déjà neutre.
+  # SessionStart starts from scratch: a --resume must not assume the tab is already neutral.
   [ "$event" != SessionStart ] && [ -f "$state_file" ] && read -r current owner < "$state_file"
   target_state "$current" "$owner"
   target=$REPLY
 
   if [ -n "$target" ] && [ "$target" != "$current" ] && emit "$target"; then
-    # Auteur de l'attente ; « any » quand l'événement ne le dit pas.
+    # Author of the wait; "any" when the event does not tell.
     case $event in
       Notification | Elicitation) REPLY=any ;;
       *) agent ;;
     esac
     printf '%s %s\n' "$target" "$REPLY" > "$state_file"
-    # Le toast ne doit pas hériter du verrou.
+    # The toast must not inherit the lock.
     [ -n "${ALERT[$target]:-}" ] && toast "$target" 9>&-
   fi
-  # Même si le pty a disparu (onglet fermé) : ne pas laisser traîner l'état.
+  # Even when the pty is gone (tab closed): do not leave the state behind.
   [ "$event" = SessionEnd ] && rm -f "$state_file"
 }
 
 main() {
   [ -n "${WT_SESSION:-}" ] || return 0
   [ -z "${TMUX:-}" ] || return 0
-  # cat plutôt que read -d '' : read lit un octet à la fois sur un pipe.
+  # cat rather than read -d '': read consumes a pipe one byte at a time.
   input=$(cat)
 
   field session_id
   [[ $REPLY =~ ^[A-Za-z0-9_-]+$ ]] || return 0
   local state_dir=${WT_TAB_STATUS_STATE_DIR:-${XDG_RUNTIME_DIR:-/tmp}/wt-tab-status}
-  [ -d "$state_dir" ] || mkdir -p -m 700 "$state_dir" 2> /dev/null
+  [ -d "$state_dir" ] || mkdir -m 700 "$state_dir" 2> /dev/null
   [ -O "$state_dir" ] || return 0
-  # Les hooks d'un même tour tournent en parallèle : le verrou évite cloche et toast en double.
+  # Hooks of the same turn run in parallel: the lock prevents duplicate bells and toasts.
   update "$state_dir/$REPLY" 9> "$state_dir/.lock"
   return 0
 }
