@@ -1,5 +1,5 @@
 {
-  "description": "Reflète l'état de Claude Code dans l'onglet Windows Terminal (couleur, anneau, cloche, toast).",
+  "description": "Mirrors Claude Code's state in the Windows Terminal tab (color, progress ring, bell, toast).",
   "hooks": {
     "SessionStart": [{ "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/tab-status.sh\"", "timeout": 10 }] }],
     "SessionEnd": [{ "hooks": [{ "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/tab-status.sh\"", "timeout": 10 }] }],

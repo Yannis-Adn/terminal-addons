@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ShellCheck
+        run: shellcheck plugins/wt-tab-status/scripts/tab-status.sh plugins/wt-tab-status/tests/run.sh
+
+      - name: Validate JSON manifests
+        run: |
+          for f in .claude-plugin/marketplace.json \
+                   plugins/wt-tab-status/.claude-plugin/plugin.json \
+                   plugins/wt-tab-status/hooks/hooks.json; do
+            python3 -m json.tool "$f" > /dev/null && echo "ok $f"
+          done
+
+      # Toast tests need powershell.exe and are skipped outside WSL.
+      - name: Tests
+        run: bash plugins/wt-tab-status/tests/run.sh

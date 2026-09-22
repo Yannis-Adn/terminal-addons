@@ -1,14 +1,15 @@
 {
   "name": "terminal-addons",
-  "description": "Plugins Claude Code pour le terminal (Windows Terminal, WSL).",
+  "description": "Claude Code plugins for Windows Terminal on WSL.",
   "owner": {
-    "name": "Adn"
+    "name": "Yannis-Adn",
+    "url": "https://github.com/Yannis-Adn"
   },
   "plugins": [
     {
       "name": "wt-tab-status",
       "source": "./plugins/wt-tab-status",
-      "description": "État de Claude Code dans les onglets Windows Terminal sous WSL."
+      "description": "Windows Terminal tabs that mirror Claude Code's state (WSL): color, progress ring, bell and toast."
     }
   ]
 }

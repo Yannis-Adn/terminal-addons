@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="200" viewBox="0 0 880 200" role="img" aria-labelledby="t d">
+  <title id="t">wt-tab-status: Windows Terminal tabs colored by Claude Code state</title>
+  <desc id="d">Four tabs: blue with a spinning ring while Claude works, red with a bell when Claude needs you, green when it is done, orange on an API error.</desc>
+  <style>
+    text { font-family: "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif; }
+    .title { font-size: 13px; fill: #ffffff; }
+    .close { font-size: 13px; fill: #ffffff; opacity: .7; }
+    .label { font-size: 13px; fill: #d4d4d4; }
+    .strong { font-weight: 600; fill: #ffffff; }
+    .prompt { font-family: "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace; font-size: 13px; fill: #9cdcfe; }
+  </style>
+
+  <!-- Window -->
+  <rect x="0" y="0" width="880" height="200" rx="10" fill="#1e1e1e"/>
+  <rect x="0" y="0" width="880" height="48" rx="10" fill="#2b2b2b"/>
+  <rect x="0" y="38" width="880" height="10" fill="#2b2b2b"/>
+
+  <!-- Tab 1: working (xterm 25) -->
+  <path d="M16 48 V20 a8 8 0 0 1 8 -8 H208 a8 8 0 0 1 8 8 V48 Z" fill="#005faf"/>
+  <circle cx="34" cy="31" r="6.5" fill="none" stroke="#ffffff" stroke-opacity=".3" stroke-width="2.2"/>
+  <path d="M34 24.5 A6.5 6.5 0 0 1 40.5 31" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>
+  <text x="50" y="35.5" class="title">◐ Refactor auth module</text>
+  <text x="198" y="35.5" class="close">✕</text>
+
+  <!-- Tab 2: needs you (xterm 124) -->
+  <path d="M224 48 V20 a8 8 0 0 1 8 -8 H416 a8 8 0 0 1 8 8 V48 Z" fill="#af0000"/>
+  <path d="M242 24 c-3.2 0 -5 2.4 -5 5.4 v3.2 l-1.6 2.2 h13.2 l-1.6 -2.2 v-3.2 c0 -3 -1.8 -5.4 -5 -5.4 z M240 36.2 a2 2 0 0 0 4 0 z" fill="#ffffff"/>
+  <text x="258" y="35.5" class="title">✳ Fix login redirect</text>
+  <text x="406" y="35.5" class="close">✕</text>
+
+  <!-- Tab 3: done (xterm 28) -->
+  <path d="M432 48 V20 a8 8 0 0 1 8 -8 H624 a8 8 0 0 1 8 8 V48 Z" fill="#008700"/>
+  <rect x="444" y="24.5" width="15" height="13" rx="2.5" fill="none" stroke="#ffffff" stroke-width="1.6"/>
+  <path d="M447.5 28.5 l3 2.5 -3 2.5" fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="466" y="35.5" class="title">✳ Update the docs</text>
+  <text x="614" y="35.5" class="close">✕</text>
+
+  <!-- Tab 4: API error (xterm 166) -->
+  <path d="M640 48 V20 a8 8 0 0 1 8 -8 H832 a8 8 0 0 1 8 8 V48 Z" fill="#d75f00"/>
+  <circle cx="658" cy="31" r="6.5" fill="none" stroke="#ffffff" stroke-width="2.2"/>
+  <text x="674" y="35.5" class="title">✳ Migrate database</text>
+  <text x="822" y="35.5" class="close">✕</text>
+
+  <!-- Terminal body -->
+  <text x="24" y="80" class="prompt">❯ claude</text>
+
+  <!-- Legend -->
+  <circle cx="30" cy="120" r="6" fill="#005faf"/>
+  <text x="44" y="124.5" class="label"><tspan class="strong">Working</tspan> — ring spins</text>
+  <circle cx="238" cy="120" r="6" fill="#af0000"/>
+  <text x="252" y="124.5" class="label"><tspan class="strong">Needs you</tspan> — bell + toast</text>
+  <circle cx="462" cy="120" r="6" fill="#008700"/>
+  <text x="476" y="124.5" class="label"><tspan class="strong">Done</tspan> — bell + toast</text>
+  <circle cx="662" cy="120" r="6" fill="#d75f00"/>
+  <text x="676" y="124.5" class="label"><tspan class="strong">API error</tspan> — bell + toast</text>
+  <text x="24" y="166" class="label" opacity=".75">Tab titles stay Claude Code's own. The color, ring and bell are added by the plugin.</text>
+</svg>

@@ -1,6 +1,19 @@
 {
   "name": "wt-tab-status",
-  "version": "0.2.1",
-  "description": "État de Claude Code dans les onglets Windows Terminal sous WSL : couleur de fond, anneau de progression, cloche et toast Windows.",
-  "author": { "name": "Adn" }
+  "version": "0.3.0",
+  "description": "Windows Terminal tabs that mirror Claude Code's state under WSL: tab color, progress ring, bell and Windows toast when Claude is working, needs you, is done or hit an API error.",
+  "author": {
+    "name": "Yannis-Adn",
+    "url": "https://github.com/Yannis-Adn"
+  },
+  "homepage": "https://github.com/Yannis-Adn/terminal-addons#wt-tab-status",
+  "repository": "https://github.com/Yannis-Adn/terminal-addons",
+  "license": "MIT",
+  "keywords": [
+    "windows-terminal",
+    "wsl",
+    "tabs",
+    "notifications",
+    "status"
+  ]
 }
