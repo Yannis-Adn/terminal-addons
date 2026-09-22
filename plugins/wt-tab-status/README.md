@@ -39,7 +39,10 @@ DECAC. Le toast passe par `powershell.exe` en arrière-plan (`scripts/toast.ps1`
 
 ## Limites
 
-- Échap : aucun hook → reste bleu jusqu'à `idle_prompt` (~60 s), puis neutre.
+- Échap (pendant le travail ou sur une question) : aucun hook ne le signale → l'onglet
+  reste bleu ou rouge jusqu'à la notification `idle_prompt`, puis redevient neutre.
+  Délai par défaut 60 s ; réglable (clé non documentée) dans `~/.claude.json` :
+  `"messageIdleNotifThresholdMs": 5000`.
 - Permission accordée : reste rouge jusqu'à la fin de l'outil.
 - Pas de tmux ; `claude -p` et le SDK n'affectent pas l'onglet.
 - Claude tué brutalement : la couleur reste jusqu'à la prochaine session Claude dans l'onglet.

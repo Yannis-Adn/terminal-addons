@@ -6,7 +6,7 @@ Marketplace locale de plugins Claude Code (`.claude-plugin/marketplace.json`), u
 
 - Tests : `bash plugins/wt-tab-status/tests/run.sh`
 - Validation : `claude plugin validate plugins/wt-tab-status` et `claude plugin validate .`
-- Les modifications s'appliquent à la prochaine session Claude (marketplace en répertoire local) ou après `/reload-plugins`.
+- Le plugin installé est une **copie** (`~/.claude/plugins/cache/terminal-addons/wt-tab-status/<version>`) : après une modification, incrémenter `version` dans `plugin.json`, puis `claude plugin marketplace update terminal-addons && claude plugin update wt-tab-status@terminal-addons`, et ouvrir une nouvelle session.
 
 ## wt-tab-status — contraintes à respecter
 
@@ -20,4 +20,5 @@ Marketplace locale de plugins Claude Code (`.claude-plugin/marketplace.json`), u
 - Dans les tests, toute commande qui lit stdin (`script`, `powershell.exe`) doit recevoir `< /dev/null` ou un here-string : sous Claude, stdin est une socket qui ne se ferme jamais.
 - `toast.ps1` : garder `$ProgressPreference = 'SilentlyContinue'`, sinon PowerShell pollue stderr avec du CLIXML.
 - Toasts invisibles alors qu'ils sont dans le centre de notifications (Win+N) : c'est le mode « Ne pas déranger » de Windows, pas un bug.
+- Aucun hook ne signale une interruption (Échap) : seul `idle_prompt` libère l'onglet. Claude ne l'envoie jamais pendant une boîte de dialogue (`isDialogOnScreen`), d'où la sortie de `working` **et** de `waiting`. Délai : `messageIdleNotifThresholdMs` dans `~/.claude.json` (réglé à 5000 sur cette machine, défaut 60000, clé non documentée).
 
