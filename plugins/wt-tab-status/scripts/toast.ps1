@@ -29,13 +29,18 @@ switch ($Kind) {
     }
     'error' {
         $title = "🟠 $project — Erreur API"
-        $body = "$($hook.error)"
+        $body = if ($hook.error_details) { "$($hook.error_details)" } else { "$($hook.error)" }
     }
 }
 
 # Corps sur une ligne, sans marqueurs Markdown, tronqué.
 $body = ($body -replace '[*`#]', '' -replace '\s+', ' ').Trim()
-if ($body.Length -gt 150) { $body = $body.Substring(0, 149) + '…' }
+if ($body.Length -gt 150) {
+    $cut = 149
+    # Ne pas couper un emoji (paire de substitution UTF-16) en deux.
+    if ([char]::IsHighSurrogate($body[$cut - 1])) { $cut-- }
+    $body = $body.Substring(0, $cut) + '…'
+}
 
 if ($DryRun) {
     [Console]::OutputEncoding = [Text.Encoding]::UTF8

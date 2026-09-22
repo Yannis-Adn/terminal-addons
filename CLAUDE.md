@@ -17,6 +17,9 @@ Marketplace locale de plugins Claude Code (`.claude-plugin/marketplace.json`), u
 - Claude Code gère lui-même le titre de l'onglet : le plugin n'y touche pas.
 - Les tests n'écrivent jamais dans un vrai pty : `WT_TAB_STATUS_OUT`, `WT_TAB_STATUS_STATE_DIR`, `WT_TAB_STATUS_TOAST_LOG`, `WT_TAB_STATUS_TOAST_DRYRUN`.
 - Nouvel événement géré dans `target_state` → le déclarer aussi dans `hooks/hooks.json` et la liste du test de cohérence.
+- Les hooks d'un même tour tournent en **parallèle** : lecture/écriture de l'état sous `flock` (fd 9), et le toast est lancé avec `9>&-` pour ne pas garder le verrou.
+- Fichier d'état : `<état> <auteur>` ; pendant `waiting`, seuls les événements d'outil du même agent (`agent_id` ou `main`) lèvent l'attente, sauf auteur `any` (notification).
+- Lire stdin avec `cat` : `read -d ''` lit octet par octet (563 ms pour 2 Mo sur chaque Pre/PostToolUse).
 - Dans les tests, toute commande qui lit stdin (`script`, `powershell.exe`) doit recevoir `< /dev/null` ou un here-string : sous Claude, stdin est une socket qui ne se ferme jamais.
 - `toast.ps1` : garder `$ProgressPreference = 'SilentlyContinue'`, sinon PowerShell pollue stderr avec du CLIXML.
 - Toasts invisibles alors qu'ils sont dans le centre de notifications (Win+N) : c'est le mode « Ne pas déranger » de Windows, pas un bug.

@@ -86,8 +86,8 @@ check "tool_name imbriqué dans tool_input ignoré" "$WORKING" "$(out)"
 
 fresh
 hook UserPromptSubmit
-hook Stop '"background_tasks":[{"id":"b1","status":"running"}]'
-check "tâches de fond : reste en cours, sans toast" "$WORKING|" "$(out)|$(toasts)"
+hook Stop '"background_tasks":[{"id":"b1","type":"subagent","status":"running","agent_type":"Explore"}]'
+check "sous-agent en fond : reste en cours, sans toast" "$WORKING|" "$(out)|$(toasts)"
 hook Stop '"background_tasks": [ ]'
 check "tâches de fond finies : terminé" "$WORKING$DONE" "$(out)"
 
@@ -95,6 +95,47 @@ fresh
 hook UserPromptSubmit
 hook Stop
 check "Stop sans background_tasks : terminé" "$WORKING$DONE" "$(out)"
+
+fresh
+hook UserPromptSubmit
+hook Stop '"background_tasks":[{"id":"b2","type":"shell","status":"running","description":"serveur","command":"npm run dev"},{"id":"b3","type":"monitor","status":"running"}]'
+check "shell ou monitor en fond : terminé quand même" "$WORKING$DONE|done " "$(out)|$(toasts)"
+
+fresh
+hook UserPromptSubmit
+hook PermissionRequest '"agent_id":"a1","agent_type":"general-purpose","tool_name":"Bash"'
+check "permission d'un sous-agent : ignorée" "$WORKING" "$(out)"
+hook Notification '"notification_type":"permission_prompt","message":"Claude needs your permission"'
+check "… la notification à 6 s prend le relais" "$WORKING$WAITING" "$(out)"
+
+fresh
+hook UserPromptSubmit
+hook PermissionRequest '"tool_name":"Bash"'
+hook PreToolUse '"agent_id":"a1","tool_name":"Read"'
+hook PostToolUse '"agent_id":"a1","tool_name":"Read"'
+check "attente du fil principal : les outils d'un sous-agent ne l'effacent pas" "$WORKING$WAITING" "$(out)"
+hook PostToolUse '"tool_name":"Bash"'
+check "… l'outil du fil principal l'efface" "$WORKING$WAITING$WORKING" "$(out)"
+
+fresh
+hook UserPromptSubmit
+hook Notification '"notification_type":"permission_prompt","message":"Claude needs your permission"'
+hook PostToolUse '"agent_id":"a1","tool_name":"Bash"'
+check "attente signalée par notification : n'importe quel outil l'efface" "$WORKING$WAITING$WORKING" "$(out)"
+
+fresh
+hook Notification '"notification_type":"worker_permission_prompt","message":"Un coéquipier demande une permission"'
+check "permission d'un coéquipier : attente" "$WAITING" "$(out)"
+
+fresh
+hook UserPromptSubmit
+hook SessionStart '"source":"compact"'
+check "auto-compaction en plein tour : ignorée" "$WORKING" "$(out)"
+
+fresh
+hook SessionStart '"source":"startup"'
+hook SessionStart '"source":"resume"'
+check "reprise : SessionStart réémet même si l'état était neutre" "$NEUTRAL$NEUTRAL" "$(out)"
 
 fresh
 hook UserPromptSubmit
@@ -142,6 +183,24 @@ hook UserPromptSubmit
 hook SessionEnd '"reason":"prompt_input_exit"'
 check "fin de session : retour au neutre" "$WORKING$NEUTRAL" "$(out)"
 check "fin de session : fichier d'état supprimé" "absent" "$([ -e "$tmp/state/s1" ] && echo présent || echo absent)"
+
+fresh
+hook UserPromptSubmit
+WT_SESSION=test TMUX= WT_TAB_STATUS_OUT=/inexistant/pty WT_TAB_STATUS_STATE_DIR="$tmp/state" \
+  bash "$script" <<< '{"session_id":"s1","hook_event_name":"SessionEnd","reason":"other"}'
+check "fin de session, onglet déjà fermé : fichier d'état supprimé" "absent" "$([ -e "$tmp/state/s1" ] && echo présent || echo absent)"
+
+races=0
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  fresh
+  hook UserPromptSubmit
+  hook PermissionRequest '"tool_name":"Bash"' &
+  hook PermissionRequest '"tool_name":"Edit"' &
+  hook PermissionRequest '"tool_name":"Write"' &
+  wait
+  [ "$(toasts)" = "waiting " ] || races=$((races + 1))
+done
+check "concurrence : 3 permissions simultanées → un seul toast (10 essais)" "0" "$races"
 
 fresh
 WT_SESSION= TMUX= WT_TAB_STATUS_OUT="$tmp/out" WT_TAB_STATUS_STATE_DIR="$tmp/state" \
@@ -209,6 +268,12 @@ if command -v powershell.exe > /dev/null; then
   check "toast erreur API" \
     "🟠 mon-projet — Erreur API|rate_limit" \
     "$(toast_of StopFailure '"error":"rate_limit"')"
+  check "toast erreur API : détail lisible si présent" \
+    "🟠 mon-projet — Erreur API|Limite d'usage atteinte" \
+    "$(toast_of StopFailure '"error":"rate_limit","error_details":"Limite d'"'"'usage atteinte"')"
+  check "toast : ne coupe pas un emoji en deux" \
+    "🟢 mon-projet — Terminé|$(printf 'a%.0s' {1..148})…" \
+    "$(toast_of Stop "\"last_assistant_message\":\"$(printf 'a%.0s' {1..148})😀 et la suite du message\"")"
   long=$(printf 'a%.0s' {1..300})
   check "toast : corps tronqué à 150 caractères" \
     "🟢 mon-projet — Terminé|$(printf 'a%.0s' {1..149})…" \

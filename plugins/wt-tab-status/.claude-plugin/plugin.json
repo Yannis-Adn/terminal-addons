@@ -1,6 +1,6 @@
 {
   "name": "wt-tab-status",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "État de Claude Code dans les onglets Windows Terminal sous WSL : couleur de fond, anneau de progression, cloche et toast Windows.",
   "author": { "name": "Adn" }
 }
