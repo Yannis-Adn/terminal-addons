@@ -175,6 +175,42 @@ check "find_pty : c'est bien un /dev/pts" "oui" "$([[ $found_tty == /dev/pts/* ]
 result=$(SCRIPT=$script "$tmp/bin/claude" < /dev/null 2> /dev/null | sed -n 2p)
 check "find_pty : claude sans pty (claude -p) → introuvable" "introuvable" "$result"
 
+# --- Contenu des toasts (dry-run, appelle vraiment powershell.exe) -----------
+
+# toast_of <événement> <champs JSON> : titre et corps calculés, séparés par « | ».
+toast_of() {
+  : > "$tmp/dry"
+  rm -rf "$tmp/state"
+  local json="{\"session_id\":\"s1\",\"cwd\":\"/home/u/mon-projet\",\"hook_event_name\":\"$1\",$2}"
+  WT_SESSION=test TMUX= WT_TAB_STATUS_OUT="$tmp/out" WT_TAB_STATUS_STATE_DIR="$tmp/state" \
+    WT_TAB_STATUS_TOAST_DRYRUN="$tmp/dry" bash "$script" <<< "$json"
+  paste -sd '|' "$tmp/dry"
+}
+
+if command -v powershell.exe > /dev/null; then
+  check "toast terminé : titre + corps nettoyé" \
+    "🟢 mon-projet — Terminé|Fini : j'ai corrigé login.ts. Tout passe ✅" \
+    "$(toast_of Stop '"last_assistant_message":"**Fini** : j'"'"'ai corrigé `login.ts`.\n\nTout passe ✅","background_tasks":[]')"
+  check "toast permission : outil + commande" \
+    "🔴 mon-projet — Claude vous attend|Permission demandée : Bash — git push" \
+    "$(toast_of PermissionRequest '"tool_name":"Bash","tool_input":{"command":"git push"}')"
+  check "toast notification : message repris" \
+    "🔴 mon-projet — Claude vous attend|Claude needs your permission to use Bash" \
+    "$(toast_of Notification '"notification_type":"permission_prompt","message":"Claude needs your permission to use Bash"')"
+  check "toast question" \
+    "🔴 mon-projet — Claude vous attend|Une question attend votre réponse" \
+    "$(toast_of PreToolUse '"tool_name":"AskUserQuestion"')"
+  check "toast erreur API" \
+    "🟠 mon-projet — Erreur API|rate_limit" \
+    "$(toast_of StopFailure '"error":"rate_limit"')"
+  long=$(printf 'a%.0s' {1..300})
+  check "toast : corps tronqué à 150 caractères" \
+    "🟢 mon-projet — Terminé|$(printf 'a%.0s' {1..149})…" \
+    "$(toast_of Stop "\"last_assistant_message\":\"$long\"")"
+else
+  echo "skip toasts : powershell.exe introuvable"
+fi
+
 # --- Bilan -----------------------------------------------------------------
 
 echo

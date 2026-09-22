@@ -108,6 +108,30 @@ emit() {
   printf '%s' "$seq" 2> /dev/null >> "$dest"
 }
 
+# toast <état> : notification Windows lancée en arrière-plan, sans bloquer Claude.
+# Le JSON du hook part sur stdin de PowerShell, qui en tire titre et corps.
+toast() {
+  if [ -n "${WT_TAB_STATUS_TOAST_LOG:-}" ]; then
+    printf '%s\n' "$1" >> "$WT_TAB_STATUS_TOAST_LOG"
+    return 0
+  fi
+  local ps dry=0 encoded dir
+  ps=$(command -v powershell.exe) || ps=/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe
+  [ -x "$ps" ] || return 0
+  [ -n "${WT_TAB_STATUS_TOAST_DRYRUN:-}" ] && dry=1
+  dir=$(dirname "${BASH_SOURCE[0]}")
+  encoded=$({
+    printf '$Kind = '"'"'%s'"'"'\n$DryRun = [bool]%s\n' "$1" "$dry"
+    cat "$dir/toast.ps1"
+  } | iconv -f UTF-8 -t UTF-16LE | base64 -w0)
+  if [ "$dry" = 1 ]; then
+    "$ps" -NoProfile -NonInteractive -EncodedCommand "$encoded" <<< "$input" 2>&1 \
+      | tr -d '\r' >> "$WT_TAB_STATUS_TOAST_DRYRUN"
+  else
+    setsid -f "$ps" -NoProfile -NonInteractive -EncodedCommand "$encoded" <<< "$input" > /dev/null 2>&1
+  fi
+}
+
 main() {
   [ -n "${WT_SESSION:-}" ] || return 0
   [ -z "${TMUX:-}" ] || return 0
@@ -128,6 +152,7 @@ main() {
     emit "$target" || return 0
     [ -d "$state_dir" ] || mkdir -p "$state_dir"
     printf '%s\n' "$target" > "$state_file"
+    [ -n "${ALERT[$target]:-}" ] && toast "$target"
   fi
   [ "$event" = SessionEnd ] && rm -f "$state_file"
   return 0
