@@ -1,0 +1,14 @@
+{
+  "name": "terminal-addons",
+  "description": "Plugins Claude Code pour le terminal (Windows Terminal, WSL).",
+  "owner": {
+    "name": "Adn"
+  },
+  "plugins": [
+    {
+      "name": "wt-tab-status",
+      "source": "./plugins/wt-tab-status",
+      "description": "État de Claude Code dans les onglets Windows Terminal sous WSL."
+    }
+  ]
+}

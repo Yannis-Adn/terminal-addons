@@ -211,6 +211,15 @@ else
   echo "skip toasts : powershell.exe introuvable"
 fi
 
+# --- hooks.json --------------------------------------------------------------
+
+hooks_json=$here/../hooks/hooks.json
+for event in SessionStart SessionEnd UserPromptSubmit PreToolUse PostToolUse PostToolUseFailure \
+  PermissionRequest Elicitation ElicitationResult Notification Stop StopFailure; do
+  check "hooks.json déclare $event" "oui" "$(grep -q "\"$event\"" "$hooks_json" 2> /dev/null && echo oui || echo non)"
+done
+check "hooks.json : 12 appels à tab-status.sh" "12" "$(grep -c 'tab-status.sh' "$hooks_json" 2> /dev/null)"
+
 # --- Bilan -----------------------------------------------------------------
 
 echo
