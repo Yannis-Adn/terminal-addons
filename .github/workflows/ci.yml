@@ -21,7 +21,9 @@ jobs:
         run: |
           for f in .claude-plugin/marketplace.json \
                    plugins/wt-tab-status/.claude-plugin/plugin.json \
-                   plugins/wt-tab-status/hooks/hooks.json; do
+                   plugins/wt-tab-status/hooks/hooks.json \
+                   plugins/pinned-prompt/.claude-plugin/plugin.json \
+                   plugins/pinned-prompt/hooks/hooks.json; do
             python3 -m json.tool "$f" > /dev/null && echo "ok $f"
           done
 

@@ -10,6 +10,11 @@
       "name": "wt-tab-status",
       "source": "./plugins/wt-tab-status",
       "description": "Windows Terminal tabs that mirror Claude Code's state (WSL): color, progress ring, bell and toast."
+    },
+    {
+      "name": "pinned-prompt",
+      "source": "./plugins/pinned-prompt",
+      "description": "Your last message pinned above the prompt; click the pin to unfold your previous messages."
     }
   ]
 }

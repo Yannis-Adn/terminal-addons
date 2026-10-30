@@ -1,0 +1,19 @@
+{
+  "name": "pinned-prompt",
+  "version": "0.1.0",
+  "description": "Your last message pinned above the prompt, so you never scroll up to remember what you asked. Click it to unfold your previous messages.",
+  "author": {
+    "name": "Yannis-Adn",
+    "url": "https://github.com/Yannis-Adn"
+  },
+  "homepage": "https://github.com/Yannis-Adn/terminal-addons#pinned-prompt",
+  "repository": "https://github.com/Yannis-Adn/terminal-addons",
+  "license": "MIT",
+  "keywords": [
+    "prompt",
+    "history",
+    "band",
+    "parallel-sessions"
+  ],
+  "types": "./types/index.d.ts"
+}

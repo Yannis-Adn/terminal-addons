@@ -9,6 +9,9 @@
 
 Plugins Claude Code pour **Windows Terminal sous WSL**.
 
+- [**wt-tab-status**](#wt-tab-status) : couleur d'onglet, anneau de progression, cloche et toast qui suivent l'état de Claude Code.
+- [**pinned-prompt**](#pinned-prompt) : votre dernier message épinglé au-dessus de la saisie, sans avoir à remonter le fil.
+
 ## wt-tab-status
 
 **Voir d'un coup d'œil quel onglet Claude Code travaille, lequel vous attend et lequel a terminé.**
@@ -116,6 +119,53 @@ flowchart LR
 /plugin uninstall wt-tab-status@terminal-addons
 ```
 
+## pinned-prompt
+
+**Votre dernier message reste épinglé au-dessus de la saisie : plus besoin de remonter le fil pour retrouver ce que vous avez demandé.**
+
+Pratique quand plusieurs sessions Claude Code tournent en parallèle : chacune affiche, juste au-dessus de sa saisie, le dernier message que vous lui avez envoyé.
+
+```
+╭──────────────────────────────────────────────────────────────╮
+│ 📌 Toi ▸ Corrige la page de connexion et relance  +2 lignes  │
+╰──────────────────────────────────────────────────────────────╯
+```
+
+### Fonctionnalités
+
+- **Toujours sous les yeux.** Un bandeau encadré juste au-dessus de la saisie, avec la première ligne de votre dernier message.
+- **Cliquez sur l'épingle pour déplier.** `📌 Toi ▸` déplie vos cinq derniers messages, le plus récent en entier ; `📌 Toi ▾` les replie. Le texte du message reste sélectionnable pour le copier.
+- **Sessions reprises aussi.** Après `--resume` ou `/resume`, le bandeau se remplit à partir du fil.
+- **Seulement ce que vous avez tapé.** Les commandes `/…`, le contexte des hooks et les rappels système sont écartés.
+- **Français ou anglais**, selon le réglage `language` de Claude Code.
+
+Pour masquer le bandeau : `[-]` à son extrémité droite, ou `Ctrl+X Ctrl+A`.
+
+### Prérequis
+
+- Claude Code avec les modules de hooks des plugins (accès anticipé), testé avec la 2.1.314
+- N'importe quel terminal : celui-ci n'a besoin ni de Windows Terminal ni de WSL
+
+### Installation
+
+Dans Claude Code :
+
+```
+/plugin marketplace add Yannis-Adn/terminal-addons
+/plugin install pinned-prompt@terminal-addons
+```
+
+### Limites
+
+- Le bandeau garde les cinq derniers messages de la session en cours, 4 000 caractères chacun au plus. `/clear` le vide.
+- Un long collage fait partie de votre message : le bandeau en montre la première ligne.
+
+### Désinstallation
+
+```
+/plugin uninstall pinned-prompt@terminal-addons
+```
+
 ## Développement
 
 ```
@@ -123,9 +173,10 @@ git clone https://github.com/Yannis-Adn/terminal-addons.git
 cd terminal-addons
 bash plugins/wt-tab-status/tests/run.sh   # les tests de toast demandent powershell.exe (WSL)
 shellcheck plugins/wt-tab-status/scripts/tab-status.sh plugins/wt-tab-status/tests/run.sh
+claude plugin test plugins/pinned-prompt  # demande la CLI Claude Code
 ```
 
-Pour essayer vos modifications, ajoutez votre clone comme marketplace : `/plugin marketplace add /chemin/vers/terminal-addons`. Les plugins installés sont des copies en cache : incrémentez `version` dans `plugin.json`, lancez `/plugin marketplace update terminal-addons`, puis mettez à jour le plugin.
+Pour essayer vos modifications, ajoutez votre clone comme marketplace : `/plugin marketplace add /chemin/vers/terminal-addons`. Les plugins installés depuis celle-ci sont lus directement dans votre clone : lancez `/reload-plugins` après une modification.
 
 Organisation du dépôt :
 
@@ -137,6 +188,12 @@ plugins/wt-tab-status/
 ├── scripts/tab-status.sh              machine à états, recherche du pty, séquences
 ├── scripts/toast.ps1                  toast Windows (français / anglais)
 └── tests/run.sh                       suite de tests (bash, sans framework)
+plugins/pinned-prompt/
+├── .claude-plugin/plugin.json         manifeste du plugin
+├── hooks/hooks.json                   désigne le module de hooks
+├── hooks/register.tsx                 historique des messages, bandeau, dépliage
+├── hooks/register.test.tsx            tests (claude plugin test)
+└── types/index.d.ts                   contrat de l'état
 ```
 
 ## Licence

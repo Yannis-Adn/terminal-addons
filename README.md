@@ -9,6 +9,9 @@
 
 Claude Code plugins for **Windows Terminal on WSL**.
 
+- [**wt-tab-status**](#wt-tab-status): tab colors, progress ring, bell and toast that follow Claude Code's state.
+- [**pinned-prompt**](#pinned-prompt): your last message pinned above the prompt, so you never scroll up to find it.
+
 ## wt-tab-status
 
 **Know at a glance which Claude Code tab is working, which one needs you, and which one is done.**
@@ -116,6 +119,53 @@ flowchart LR
 /plugin uninstall wt-tab-status@terminal-addons
 ```
 
+## pinned-prompt
+
+**Your last message stays pinned above the prompt, so you never scroll up to remember what you asked.**
+
+Handy when several Claude Code sessions run side by side: each one shows, right above its prompt, the last message you sent it.
+
+```
+╭──────────────────────────────────────────────────────────────╮
+│ 📌 You ▸ Fix the login page and rerun the tests  +2 lines    │
+╰──────────────────────────────────────────────────────────────╯
+```
+
+### Features
+
+- **Always in view.** A framed band right above the prompt, with the first line of your last message.
+- **Click the pin to unfold.** `📌 You ▸` unfolds your last five messages, the latest in full; `📌 You ▾` folds them back. The message text stays selectable, so you can copy it.
+- **Resumed sessions too.** After `--resume` or `/resume`, the band is filled from the transcript.
+- **Only what you typed.** Slash commands, hook context and system reminders are left out.
+- **English or French**, following Claude Code's `language` setting.
+
+To hide the band, click `[-]` at its right end or press `Ctrl+X Ctrl+A`.
+
+### Requirements
+
+- Claude Code with plugin hooks modules (early access), tested with 2.1.314
+- Any terminal: this one does not need Windows Terminal or WSL
+
+### Install
+
+In Claude Code:
+
+```
+/plugin marketplace add Yannis-Adn/terminal-addons
+/plugin install pinned-prompt@terminal-addons
+```
+
+### Limitations
+
+- The band keeps the last five messages of the current session, up to 4,000 characters each. `/clear` empties it.
+- A long paste counts as part of your message: the band shows its first line.
+
+### Uninstall
+
+```
+/plugin uninstall pinned-prompt@terminal-addons
+```
+
 ## Development
 
 ```
@@ -123,9 +173,10 @@ git clone https://github.com/Yannis-Adn/terminal-addons.git
 cd terminal-addons
 bash plugins/wt-tab-status/tests/run.sh   # toast tests need powershell.exe (WSL)
 shellcheck plugins/wt-tab-status/scripts/tab-status.sh plugins/wt-tab-status/tests/run.sh
+claude plugin test plugins/pinned-prompt  # needs the Claude Code CLI
 ```
 
-To try local changes, add your clone as a marketplace: `/plugin marketplace add /path/to/terminal-addons`. Installed plugins are cached copies, so bump `version` in `plugin.json` and run `/plugin marketplace update terminal-addons`, then update the plugin.
+To try local changes, add your clone as a marketplace: `/plugin marketplace add /path/to/terminal-addons`. Plugins installed from it are read from your clone: run `/reload-plugins` after a change.
 
 Repository layout:
 
@@ -137,6 +188,12 @@ plugins/wt-tab-status/
 ├── scripts/tab-status.sh              state machine, pty lookup, escape sequences
 ├── scripts/toast.ps1                  Windows toast (English / French)
 └── tests/run.sh                       test suite (bash, no framework)
+plugins/pinned-prompt/
+├── .claude-plugin/plugin.json         plugin manifest
+├── hooks/hooks.json                   names the hooks module
+├── hooks/register.tsx                 prompt history, the band, folding
+├── hooks/register.test.tsx            tests (claude plugin test)
+└── types/index.d.ts                   state contract
 ```
 
 ## License

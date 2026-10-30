@@ -4,10 +4,17 @@ Claude Code plugin marketplace (`.claude-plugin/marketplace.json`), one folder p
 
 ## Commands
 
-- Tests: `bash plugins/wt-tab-status/tests/run.sh`
+- Tests: `bash plugins/wt-tab-status/tests/run.sh` and `claude plugin test plugins/pinned-prompt` (the latter needs the Claude Code CLI, so CI does not run it)
 - Lint: `shellcheck plugins/wt-tab-status/scripts/tab-status.sh plugins/wt-tab-status/tests/run.sh` (must stay clean, CI runs it)
-- Validation: `claude plugin validate plugins/wt-tab-status` and `claude plugin validate .`
-- Installed plugins are **copies** (`~/.claude/plugins/cache/terminal-addons/wt-tab-status/<version>`): after a change, bump `version` in `plugin.json`, add a `CHANGELOG.md` entry, then `claude plugin marketplace update terminal-addons && claude plugin update wt-tab-status@terminal-addons` and open a new session.
+- Validation: `claude plugin validate plugins/<plugin>` and `claude plugin validate .`
+- Installed from this folder (a local marketplace), a plugin is read from the folder itself (`claude plugin list` shows `Read from:`): `/reload-plugins` in a session picks up a change. A release still bumps `version` in `plugin.json` and adds a `CHANGELOG.md` entry: installs from GitHub are cached copies.
+
+## pinned-prompt: constraints
+
+- A Claude Code hooks module (`hooks/register.tsx`, early-access plugin API), not shell hooks: no Node, no DOM, everything goes through `$`. The API's types are written by the engine into `.claude-plugin/types/` (git-ignored); `claude plugin validate` and `claude plugin test` check the module.
+- State lives in `$.state` (contract in `types/index.d.ts`), never in module variables: a reload resets those. A `ui.render` hook never writes state; handlers use `update`.
+- Labels exist in English and French (`LABELS`); add both when adding one. The language comes from Claude Code's `language` setting.
+- Only the `📌 You ▸` pin is a `Button`: the message text must stay selectable for copying.
 
 ## wt-tab-status: constraints
 
